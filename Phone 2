@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>دليل هاتف الموظفين - إضافة متاحة للجميع</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f5f7fa; color: #333; line-height: 1.6; padding: 12px; max-width: 1100px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 18px; padding: 16px; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { margin-bottom: 6px; font-size: 1.6rem; }
+        .subtitle { font-size: 0.95rem; opacity: 0.95; }
+        .container { display: flex; gap: 18px; flex-wrap: wrap; }
+        .left-panel, .right-panel { background-color: white; padding: 18px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); }
+        .left-panel { flex: 1 1 320px; min-width: 280px; }
+        .right-panel { flex: 2 1 480px; min-width: 280px; }
+        h2 { color: #2c3e50; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #2c3e50; font-size: 0.92rem; }
+        label.required::after { content: " *"; color: #e74c3c; }
+        input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 120px; }
+        .buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        button { padding: 10px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: 0.1s; }
+        button:active { transform: scale(0.97); }
+        .add-btn { background-color: #3498db; color: white; }
+        .update-btn { background-color: #27ae60; color: white; }
+        .cancel-btn { background-color: #f39c12; color: white; }
+        .search-box { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .search-box input { flex: 1; min-width: 180px; }
+        .contact-list { max-height: 520px; overflow-y: auto; margin-top: 10px; border: 1px solid #eee; border-radius: 6px; }
+        .contact-item { padding: 12px; border-bottom: 1px solid #eee; transition: background-color 0.15s; }
+        .contact-item:hover { background-color: #f9f9f9; }
+        .contact-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+        .contact-name { color: #2c3e50; font-size: 1rem; font-weight: 700; }
+        .employee-id { background-color: #3498db; color: white; padding: 3px 8px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; }
+        .detail-item { font-size: 0.9rem; margin: 4px 0; display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+        .action-buttons { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+        .action-btn { padding: 6px 10px; border-radius: 6px; border: none; font-weight:600; cursor:pointer; font-size:0.85rem; }
+        .edit-btn { background:#f39c12; color:white; }
+        .delete-btn { background:#e74c3c; color:white; }
+        .phone-icon, .wa-icon { margin-left: 4px; cursor: pointer; padding: 2px 5px; border-radius: 4px; }
+        .phone-icon:hover { background-color: #d4edda; }
+        .wa-icon:hover { background-color: #d4edda; }
+        .empty-list { text-align:center; padding: 30px 10px; color:#777; }
+        .stats { display:flex; gap:10px; margin-top:12px; padding:10px; background:#f8f9fa; border-radius:8px; }
+        .stat-item { text-align:center; flex:1; min-width:100px; }
+        .stat-value { font-size:1.2rem; font-weight:800; color:#3498db; }
+        .message { padding:10px 12px; margin-bottom:10px; border-radius:6px; display:none; font-weight:700; }
+        .success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+        .error { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
+        .warning { background:#fff3cd; color:#856404; border:1px solid #ffeeba; }
+        footer { text-align:center; margin-top:18px; padding:12px; color:#666; font-size:0.85rem; }
+        
+        /* شريط حالة المسؤول */
+        .admin-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 8px 15px;
+            background: #f0f4f8;
+            border-radius: 50px;
+        }
+        .admin-toggle-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 30px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-toggle-btn:hover {
+            background-color: rgba(0,0,0,0.08);
+        }
+        .lock-icon { color: #7f8c8d; }
+        .unlock-icon { color: #27ae60; }
+        .admin-badge {
+            background: #2c3e50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        /* نافذة كلمة السر المنبثقة */
+        .password-popup {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .popup-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .popup-content h3 { margin-bottom: 15px; color: #2c3e50; }
+        .popup-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+        }
+        .popup-buttons { display: flex; gap: 10px; }
+        .popup-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .popup-confirm { background-color: #27ae60; color: white; }
+        .popup-cancel { background-color: #e74c3c; color: white; }
+        
+        @media (max-width: 720px) { body { padding:10px; } header h1 { font-size:1.2rem; } .container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-address-book"></i> دليل هاتف الموظفين</h1>
+        <p class="subtitle">إضافة الموظفين متاحة للجميع - التعديل والحذف تتطلب صلاحية المسؤول</p>
+    </header>
+
+    <!-- شريط حالة المسؤول -->
+    <div class="admin-status-bar">
+        <div>
+            <i class="fas fa-info-circle"></i> 
+            <span id="statusMessage">يمكن للجميع إضافة موظفين جدد</span>
+        </div>
+        <button id="adminToggleBtn" class="admin-toggle-btn">
+            <i id="adminIcon" class="fas fa-lock lock-icon"></i>
+            <span id="adminText">وضع المسؤول</span>
+        </button>
+    </div>
+
+    <!-- نافذة إدخال الرقم السري المنبثقة -->
+    <div id="passwordPopup" class="password-popup">
+        <div class="popup-content">
+            <h3><i class="fas fa-lock"></i> صلاحية المسؤول</h3>
+            <p>أدخل الرقم السري لتفعيل التعديل والحذف</p>
+            <input type="password" id="secretPasswordInput" placeholder="****" maxlength="4" inputmode="numeric">
+            <div class="popup-buttons">
+                <button id="popupConfirmBtn" class="popup-confirm"><i class="fas fa-check"></i> تفعيل</button>
+                <button id="popupCancelBtn" class="popup-cancel"><i class="fas fa-times"></i> إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- اللوحة اليسرى: نموذج الإدخال (متاح للجميع) -->
+        <div class="left-panel">
+            <h2><i class="fas fa-user-plus"></i> إضافة موظف جديد</h2>
+            <div id="message" class="message"></div>
+            <div class="form-group">
+                <label for="name" class="required">اسم الموظف الكامل</label>
+                <input type="text" id="name" placeholder="أدخل الاسم الكامل للموظف">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="employeeId" class="required">رقم التوظيف (رقم رئيسي لا يتكرر)</label>
+                    <input type="text" id="employeeId" placeholder="رقم الموظف الفريد">
+                </div>
+                <div class="form-group">
+                    <label for="field">التخصص (اختياري)</label>
+                    <input type="text" id="field" placeholder="التخصص أو الحقل">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department" class="required">القسم</label>
+                    <select id="department">
+                        <option value="">اختر القسم</option>
+                        <option value="قسم الإنتاج">قسم الإنتاج</option>
+                        <option value="قسم الصيانة">قسم الصيانة</option>
+                        <option value="قسم السلامة">قسم السلامة</option>
+                        <option value="قسم الإطفاء">قسم الإطفاء</option>
+                        <option value="قسم المخازن">قسم المخازن</option>
+                        <option value="قسم الاتصالات">قسم الاتصالات</option>
+                        <option value="الأمن الصناعي">الأمن الصناعي</option>
+                        <option value="قسم الخدمات">قسم الخدمات</option>
+                        <option value="قسم التموين">قسم التموين</option>
+                        <option value="الطبية">الطبية</option>
+                        <option value="التدريب">التدريب</option>
+                        <option value="محطة الكهرباء">محطة الكهرباء</option>
+                        <option value="أقسام أخرى">أقسام أخرى</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="workPhone" class="required">هاتف العمل</label>
+                    <input type="text" id="workPhone" placeholder="رقم هاتف العمل">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="roomPhone">هاتف الحجرة (اختياري)</label>
+                    <input type="text" id="roomPhone" placeholder="هاتف الحجرة الداخلي">
+                </div>
+                <div class="form-group">
+                    <label for="mobileMadaar">رقم مدار (اختياري)</label>
+                    <input type="text" id="mobileMadaar" placeholder="مثال: 0912345678">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="mobileLibyana">رقم ليبيانا (اختياري)</label>
+                    <input type="text" id="mobileLibyana" placeholder="مثال: 0922345678">
+                </div>
+                <div class="form-group">
+                    <!-- فراغ -->
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="notes">ملاحظات (اختياري)</label>
+                <textarea id="notes" placeholder="أي ملاحظات إضافية" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="extension">القاطع الداخلي (اختياري)</label>
+                <input type="text" id="extension" placeholder="رقم القاطع الداخلي">
+            </div>
+            <div class="buttons">
+                <button id="addBtn" type="button" class="add-btn"><i class="fas fa-plus"></i> إضافة موظف</button>
+                <button id="updateBtn" type="button" class="update-btn" style="display:none;"><i class="fas fa-save"></i> حفظ التعديل</button>
+                <button id="cancelBtn" type="button" class="cancel-btn" style="display:none;"><i class="fas fa-times"></i> إلغاء</button>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalEmployees">0</div>
+                    <div class="stat-label">إجمالي الموظفين</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="departmentsCount">0</div>
+                    <div class="stat-label">عدد الأقسام</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- اللوحة اليمنى: قائمة الموظفين -->
+        <div class="right-panel">
+            <h2><i class="fas fa-users"></i> قائمة الموظفين</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="ابحث بالاسم، الرقم، أو القسم...">
+                <button id="searchBtn" type="button" class="add-btn"><i class="fas fa-search"></i> بحث</button>
+                <button id="clearSearchBtn" type="button" class="cancel-btn"><i class="fas fa-eraser"></i> مسح</button>
+                <button id="refreshBtn" type="button" style="background-color:#2ecc71; color:white;"><i class="fas fa-sync-alt"></i> تحديث</button>
+                <button id="deleteAllBtn" type="button" style="background-color:#e74c3c; color:white;"><i class="fas fa-trash-alt"></i> مسح الكل</button>
+            </div>
+            <div class="filters" style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:140px;">
+                    <label for="filterDept">تصفية بالقسم</label>
+                    <select id="filterDept">
+                        <option value="">جميع الأقسام</option>
+                        <option value="قسم الإنتاج">قسم الإنتاج</option>
+                        <option value="قسم الصيانة">قسم الصيانة</option>
+                        <option value="قسم السلامة">قسم السلامة</option>
+                        <option value="قسم الإطفاء">قسم الإطفاء</option>
+                        <option value="قسم المخازن">قسم المخازن</option>
+                        <option value="قسم الاتصالات">قسم الاتصالات</option>
+                        <option value="الأمن الصناعي">الأمن الصناعي</option>
+                        <option value="قسم الخدمات">قسم الخدمات</option>
+                        <option value="قسم التموين">قسم التموين</option>
+                        <option value="الطبية">الطبية</option>
+                        <option value="التدريب">التدريب</option>
+                        <option value="محطة الكهرباء">محطة الكهرباء</option>
+                        <option value="أقسام أخرى">أقسام أخرى</option>
+                    </select>
+                </div>
+                <div style="flex:1; min-width:140px;">
+                    <label for="sortBy">ترتيب حسب</label>
+                    <select id="sortBy">
+                        <option value="name">الاسم (أ-ي)</option>
+                        <option value="nameDesc">الاسم (ي-أ)</option>
+                        <option value="employeeId">رقم التوظيف</option>
+                        <option value="department">القسم</option>
+                    </select>
+                </div>
+            </div>
+            <div class="contact-list" id="contactList">
+                <div class="empty-list"><i class="fas fa-users"></i><h3>جارٍ تحميل البيانات...</h3></div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>دليل هاتف الموظفين - إضافة الموظفين متاحة للجميع | التعديل والحذف تتطلب الرقم السري</p>
+    </footer>
+
+    <script>
+        // ------------------ إعدادات Firebase ------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxNjHSgnpY_zgCcO2BjvDw8bFxba1SGUA",
+            authDomain: "company-phonebook-18495.firebaseapp.com",
+            databaseURL: "https://company-phonebook-18495-default-rtdb.firebaseio.com",
+            projectId: "company-phonebook-18495",
+            storageBucket: "company-phonebook-18495.firebasestorage.app",
+            messagingSenderId: "978246787214",
+            appId: "1:978246787214:web:4f19abdb4fd46c181129df",
+            measurementId: "G-SNVPXKEKRE"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const dbRef = firebase.database().ref('phonebook');
+
+        // ------------------ المتغيرات العامة ------------------
+        let employees = [];
+        let currentEditId = null;
+        let isAdmin = false; // حالة المسؤول (تتحكم في التعديل والحذف فقط)
+
+        // عناصر DOM
+        const nameInput = document.getElementById('name');
+        const employeeIdInput = document.getElementById('employeeId');
+        const fieldInput = document.getElementById('field');
+        const departmentInput = document.getElementById('department');
+        const workPhoneInput = document.getElementById('workPhone');
+        const roomPhoneInput = document.getElementById('roomPhone');
+        const mobileMadaarInput = document.getElementById('mobileMadaar');
+        const mobileLibyanaInput = document.getElementById('mobileLibyana');
+        const notesInput = document.getElementById('notes');
+        const extensionInput = document.getElementById('extension');
+        const addBtn = document.getElementById('addBtn');
+        const updateBtn = document.getElementById('updateBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const deleteAllBtn = document.getElementById('deleteAllBtn');
+        const filterDeptInput = document.getElementById('filterDept');
+        const sortByInput = document.getElementById('sortBy');
+        const contactList = document.getElementById('contactList');
+        const totalEmployeesEl = document.getElementById('totalEmployees');
+        const departmentsCountEl = document.getElementById('departmentsCount');
+        const messageEl = document.getElementById('message');
+        
+        // عناصر التحكم بالصلاحية
+        const adminToggleBtn = document.getElementById('adminToggleBtn');
+        const adminIcon = document.getElementById('adminIcon');
+        const adminText = document.getElementById('adminText');
+        const statusMessage = document.getElementById('statusMessage');
+        const passwordPopup = document.getElementById('passwordPopup');
+        const secretPasswordInput = document.getElementById('secretPasswordInput');
+        const popupConfirmBtn = document.getElementById('popupConfirmBtn');
+        const popupCancelBtn = document.getElementById('popupCancelBtn');
+
+        // ------------------ دوال الصلاحية (تؤثر فقط على التعديل والحذف) ------------------
+        function setAdminMode(status) {
+            isAdmin = status;
+            
+            // تحديث واجهة المستخدم
+            if (isAdmin) {
+                adminIcon.className = 'fas fa-lock-open unlock-icon';
+                adminText.textContent = 'المسؤول (مفعل)';
+                statusMessage.in
